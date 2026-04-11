@@ -104,7 +104,7 @@ app.get('/health', async (_req, res) => {
   }
 
   try {
-    const result = await sendToPrinter('health', {}, 5000);
+    const result = await sendToPrinter('health', {}, 3000);
     res.json({
       ok: true,
       gatewayConnected: true,
