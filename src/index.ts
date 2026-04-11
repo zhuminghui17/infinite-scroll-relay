@@ -89,16 +89,35 @@ async function sendToPrinter(action: string, payload: any, timeout = 10000): Pro
   });
 }
 
-// Health check
-app.get('/health', (_req, res) => {
-  const isConnected = printerConnection !== null && 
+// Health check - asks gateway for real printer status
+app.get('/health', async (_req, res) => {
+  const gatewayConnected = printerConnection !== null && 
     printerConnection.ws.readyState === WebSocket.OPEN;
   
-  res.json({
-    ok: true,
-    printerConnected: isConnected,
-    printerConnectedAt: isConnected ? printerConnection?.connectedAt : null,
-  });
+  if (!gatewayConnected) {
+    res.json({
+      ok: true,
+      gatewayConnected: false,
+      printerConnected: false,
+    });
+    return;
+  }
+
+  try {
+    const result = await sendToPrinter('health', {}, 5000);
+    res.json({
+      ok: true,
+      gatewayConnected: true,
+      printerConnected: result.printerOnline === true,
+      printerConnectedAt: printerConnection?.connectedAt ?? null,
+    });
+  } catch {
+    res.json({
+      ok: true,
+      gatewayConnected: true,
+      printerConnected: false,
+    });
+  }
 });
 
 // Scroll endpoint - forward to printer
