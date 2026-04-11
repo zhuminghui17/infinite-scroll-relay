@@ -91,10 +91,13 @@ async function sendToPrinter(action: string, payload: any, timeout = 10000): Pro
 
 // Health check
 app.get('/health', (_req, res) => {
+  const isConnected = printerConnection !== null && 
+    printerConnection.ws.readyState === WebSocket.OPEN;
+  
   res.json({
     ok: true,
-    printerConnected: printerConnection !== null,
-    printerConnectedAt: printerConnection?.connectedAt,
+    printerConnected: isConnected,
+    printerConnectedAt: isConnected ? printerConnection?.connectedAt : null,
   });
 });
 
