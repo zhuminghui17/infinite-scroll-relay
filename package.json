@@ -4,7 +4,7 @@
   "description": "WebSocket relay server for infinite-scroll print gateway",
   "main": "dist/index.js",
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && cp -r src/html dist/",
     "start": "node dist/index.js",
     "dev": "ts-node src/index.ts"
   },
