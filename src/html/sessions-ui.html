@@ -5,11 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <title>Print sessions</title>
   <style>
-    body { font-family: ui-sans-serif, system-ui, sans-serif; margin: 16px; background: #0f0f12; color: #e8e8ec; }
+    body { font-family: ui-sans-serif, system-ui, sans-serif; margin: 16px; background: #0f0f12; color: #e8e8ec; text-align: center; }
     h1 { font-size: 1rem; font-weight: 600; margin: 0 0 12px; }
     table { border-collapse: collapse; width: 100%; font-size: 12px; }
-    th, td { border: 1px solid #27272a; padding: 6px 8px; text-align: left; vertical-align: top; }
+    th, td { border: 1px solid #27272a; padding: 6px 8px; text-align: center; vertical-align: middle; }
     th { background: #18181b; }
+    th.idx, td.idx { width: 3rem; color: #a1a1aa; }
     .ok { color: #4ade80; }
     .fail { color: #f87171; }
     .meta { color: #71717a; margin-bottom: 12px; font-size: 12px; }
@@ -53,17 +54,19 @@
         const r = await fetch('/sessions' + location.search, { headers: { Accept: 'application/json' } });
         if (!r.ok) { w.textContent = r.status + ' ' + r.statusText; return; }
         const j = await r.json();
-        document.getElementById('metaDesc').textContent =
-          j.source === 'supabase' ? 'All sessions from Supabase · ' : 'Recent sessions (relay memory) · ';
         var rows = j.sessions || [];
         if (j.source !== 'supabase') {
           rows = rows.slice().reverse();
         }
-        if (!rows.length) { w.textContent = 'No sessions yet.'; return; }
-        var h = '<table><thead><tr><th>Timestamp</th><th>OK</th><th>Duration</th><th>Session distance (cm)</th><th>Accumulated distance (cm)</th><th>Scroll count</th><th>Error</th></tr></thead><tbody>';
-        rows.forEach(function (s) {
+        var n = rows.length;
+        document.getElementById('metaDesc').textContent =
+          (j.source === 'supabase' ? 'All sessions from Supabase' : 'Recent sessions (relay memory)') +
+          ' · ' + n + (n === 1 ? ' session' : ' sessions') + ' · ';
+        if (!n) { w.textContent = 'No sessions yet.'; return; }
+        var h = '<table><thead><tr><th class="idx">#</th><th>Timestamp</th><th>OK</th><th>Duration</th><th>Session distance (cm)</th><th>Accumulated distance (cm)</th><th>Scroll count</th><th>Error</th></tr></thead><tbody>';
+        rows.forEach(function (s, i) {
           var scrollCount = typeof s.scrollTouchCount === 'number' ? s.scrollTouchCount : s.signalCount;
-          h += '<tr><td>' + formatTimestamp(s.createdAt) + '</td><td class="' + (s.success ? 'ok' : 'fail') + '">' + (s.success ? 'yes' : 'no') +
+          h += '<tr><td class="idx">' + (n - i) + '</td><td>' + formatTimestamp(s.createdAt) + '</td><td class="' + (s.success ? 'ok' : 'fail') + '">' + (s.success ? 'yes' : 'no') +
             '</td><td>' + formatDuration(s.durationMs) + '</td><td>' + Number(s.scrollDepthCm).toFixed(2) + '</td><td>' +
             Number(s.accumulatedDistanceCm).toFixed(2) + '</td><td>' + scrollCount + '</td><td>' +
             (s.errorMessage ? String(s.errorMessage).replace(/</g,'&lt;') : '') + '</td></tr>';
