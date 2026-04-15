@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Print sessions</title>
+  <style>
+    body { font-family: ui-sans-serif, system-ui, sans-serif; margin: 16px; background: #0f0f12; color: #e8e8ec; }
+    h1 { font-size: 1rem; font-weight: 600; margin: 0 0 12px; }
+    table { border-collapse: collapse; width: 100%; font-size: 12px; }
+    th, td { border: 1px solid #27272a; padding: 6px 8px; text-align: left; vertical-align: top; }
+    th { background: #18181b; }
+    .ok { color: #4ade80; }
+    .fail { color: #f87171; }
+    .meta { color: #71717a; margin-bottom: 12px; font-size: 12px; }
+    a { color: #93c5fd; }
+  </style>
+</head>
+<body>
+  <h1>Print sessions</h1>
+  <p class="meta"><span id="metaDesc"></span><a href="/sessions">JSON</a></p>
+  <div id="wrap"></div>
+  <script>
+    function formatTimestamp(iso) {
+      var d = new Date(iso);
+      if (isNaN(d.getTime())) return String(iso);
+      function pad(n) { return (n < 10 ? '0' : '') + n; }
+      var core = d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + ' ' +
+        pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds());
+      var parts = Intl.DateTimeFormat(undefined, { timeZoneName: 'short' }).formatToParts(d);
+      var tz = '';
+      for (var i = 0; i < parts.length; i++) {
+        if (parts[i].type === 'timeZoneName') { tz = parts[i].value; break; }
+      }
+      return tz ? core + ' ' + tz : core;
+    }
+    function formatDuration(ms) {
+      var n = Number(ms);
+      if (!isFinite(n) || n < 0) return '—';
+      var sec = Math.floor(n / 1000);
+      var msec = Math.round(n % 1000);
+      if (sec < 60) return (msec ? (n / 1000).toFixed(1) : String(sec)) + ' s';
+      var m = Math.floor(sec / 60);
+      var s = sec % 60;
+      if (m < 60) return m + ' m ' + s + ' s';
+      var h = Math.floor(m / 60);
+      m = m % 60;
+      return h + ' h ' + m + ' m';
+    }
+    async function load() {
+      const w = document.getElementById('wrap');
+      try {
+        const r = await fetch('/sessions' + location.search, { headers: { Accept: 'application/json' } });
+        if (!r.ok) { w.textContent = r.status + ' ' + r.statusText; return; }
+        const j = await r.json();
+        document.getElementById('metaDesc').textContent =
+          j.source === 'supabase' ? 'All sessions from Supabase · ' : 'Recent sessions (relay memory) · ';
+        var rows = j.sessions || [];
+        if (j.source !== 'supabase') {
+          rows = rows.slice().reverse();
+        }
+        if (!rows.length) { w.textContent = 'No sessions yet.'; return; }
+        var h = '<table><thead><tr><th>Timestamp</th><th>OK</th><th>Duration</th><th>Session distance (cm)</th><th>Accumulated distance (cm)</th><th>Scroll count</th><th>Error</th></tr></thead><tbody>';
+        rows.forEach(function (s) {
+          var scrollCount = typeof s.scrollTouchCount === 'number' ? s.scrollTouchCount : s.signalCount;
+          h += '<tr><td>' + formatTimestamp(s.createdAt) + '</td><td class="' + (s.success ? 'ok' : 'fail') + '">' + (s.success ? 'yes' : 'no') +
+            '</td><td>' + formatDuration(s.durationMs) + '</td><td>' + Number(s.scrollDepthCm).toFixed(2) + '</td><td>' +
+            Number(s.accumulatedDistanceCm).toFixed(2) + '</td><td>' + scrollCount + '</td><td>' +
+            (s.errorMessage ? String(s.errorMessage).replace(/</g,'&lt;') : '') + '</td></tr>';
+        });
+        h += '</tbody></table>';
+        w.innerHTML = h;
+      } catch (e) {
+        w.textContent = String(e);
+      }
+    }
+    load();
+    setInterval(load, 3000);
+  </script>
+</body>
+</html>

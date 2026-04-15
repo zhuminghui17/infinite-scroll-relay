@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Relay logs</title>
+  <style>
+    body { font-family: ui-monospace, monospace; margin: 16px; background: #0f0f12; color: #e8e8ec; }
+    h1 { font-size: 1rem; font-weight: 600; margin: 0 0 12px; }
+    pre { white-space: pre-wrap; word-break: break-word; margin: 0; font-size: 12px; line-height: 1.45; }
+    .meta { color: #71717a; margin-bottom: 12px; font-size: 12px; }
+    a { color: #93c5fd; }
+  </style>
+</head>
+<body>
+  <h1>Relay logs</h1>
+  <p class="meta">Refreshes every 2s · <a href="/logs">JSON</a></p>
+  <pre id="out"></pre>
+  <script>
+    async function load() {
+      const out = document.getElementById('out');
+      try {
+        const r = await fetch('/logs' + location.search, { headers: { Accept: 'application/json' } });
+        if (!r.ok) { out.textContent = r.status + ' ' + r.statusText; return; }
+        const j = await r.json();
+        out.textContent = (j.entries || []).map(function (e) {
+          return '[' + e.ts + '] ' + e.level.toUpperCase() + ' ' + e.message;
+        }).join('\n');
+      } catch (e) {
+        out.textContent = String(e);
+      }
+    }
+    load();
+    setInterval(load, 2000);
+  </script>
+</body>
+</html>
