@@ -3,9 +3,9 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>Print sessions</title>
+  <title>Infinite Scroll Relay</title>
   <style>
-    body { font-family: ui-sans-serif, system-ui, sans-serif; margin: 16px; background: #0f0f12; color: #e8e8ec; text-align: center; }
+    body { font-family: ui-sans-serif, system-ui, sans-serif; margin: 16px; padding-bottom: calc(3.25rem + env(safe-area-inset-bottom, 0px)); background: #0f0f12; color: #e8e8ec; text-align: left; }
     h1 { font-size: 1rem; font-weight: 600; margin: 0 0 12px; }
     table { border-collapse: collapse; width: 100%; font-size: 12px; }
     th, td { border: 1px solid #27272a; padding: 6px 8px; text-align: center; vertical-align: middle; }
@@ -15,12 +15,34 @@
     .fail { color: #f87171; }
     .meta { color: #71717a; margin-bottom: 12px; font-size: 12px; }
     a { color: #93c5fd; }
+    .status-bar {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      z-index: 10;
+      font-size: 12px;
+      margin: 0;
+      padding: 10px 16px calc(10px + env(safe-area-inset-bottom, 0px));
+      background: #18181b;
+      border-top: 1px solid #27272a;
+      box-sizing: border-box;
+    }
+    .status-bar .state { font-weight: 600; }
+    .status-bar .state.ok { color: #4ade80; }
+    .status-bar .state.fail { color: #f87171; }
+    .status-bar .sep { margin: 0 10px; color: #52525b; }
   </style>
 </head>
 <body>
-  <h1>Print sessions</h1>
+  <h1>Infinite Scroll Relay</h1>
   <p class="meta"><span id="metaDesc"></span><a href="/sessions">JSON</a></p>
   <div id="wrap"></div>
+  <div class="status-bar" id="statusBar">
+    Gateway: <span class="state fail" id="gwState">…</span>
+    <span class="sep">·</span>
+    Printer: <span class="state fail" id="prState">…</span>
+  </div>
   <script>
     function formatTimestamp(iso) {
       var d = new Date(iso);
@@ -48,6 +70,30 @@
       m = m % 60;
       return h + ' h ' + m + ' m';
     }
+    async function refreshHealth() {
+      var gw = document.getElementById('gwState');
+      var pr = document.getElementById('prState');
+      try {
+        var r = await fetch('/health', { headers: { Accept: 'application/json' } });
+        if (!r.ok) {
+          gw.textContent = 'error';
+          pr.textContent = 'error';
+          gw.className = 'state fail';
+          pr.className = 'state fail';
+          return;
+        }
+        var j = await r.json();
+        gw.textContent = j.gatewayConnected ? 'connected' : 'disconnected';
+        gw.className = j.gatewayConnected ? 'state ok' : 'state fail';
+        pr.textContent = j.printerConnected ? 'online' : 'offline';
+        pr.className = j.printerConnected ? 'state ok' : 'state fail';
+      } catch (e) {
+        gw.textContent = 'unreachable';
+        pr.textContent = '—';
+        gw.className = 'state fail';
+        pr.className = 'state fail';
+      }
+    }
     async function load() {
       const w = document.getElementById('wrap');
       try {
@@ -60,7 +106,7 @@
         }
         var n = rows.length;
         document.getElementById('metaDesc').textContent =
-          (j.source === 'supabase' ? 'All sessions from Supabase' : 'Recent sessions (relay memory)') +
+          (j.source === 'supabase' ? 'All print sessions recorded in database' : 'Recent print sessions recorded in relay memory') +
           ' · ' + n + (n === 1 ? ' session' : ' sessions') + ' · ';
         if (!n) { w.textContent = 'No sessions yet.'; return; }
         var h = '<table><thead><tr><th class="idx">#</th><th>Timestamp</th><th>OK</th><th>Duration</th><th>Session distance (cm)</th><th>Accumulated distance (cm)</th><th>Scroll count</th><th>Error</th></tr></thead><tbody>';
@@ -77,6 +123,8 @@
         w.textContent = String(e);
       }
     }
+    refreshHealth();
+    setInterval(refreshHealth, 3000);
     load();
     setInterval(load, 3000);
   </script>
