@@ -9,6 +9,7 @@ import {
   isSupabaseConfigured,
   recordPrintSessionToSupabase,
   fetchPrintSessionsFromSupabase,
+  supabaseEnvGap,
 } from './supabase';
 import { LOGS_UI_HTML, SESSIONS_UI_HTML } from './uiHtml';
 
@@ -230,7 +231,7 @@ server.listen(PORT, () => {
   } else {
     relayLog(
       'warn',
-      'Supabase: not configured (set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY, SUPABASE_ANON_KEY, or SUPABASE_PUBLISHABLE_KEY)',
+      `Supabase: not configured — ${supabaseEnvGap() ?? 'set SUPABASE_URL and a Supabase API key'}`,
     );
   }
   relayLog(

@@ -4,19 +4,45 @@ import { relayLog } from './logger';
 
 let client: SupabaseClient | null | undefined;
 
+function envTrim(v: string | undefined): string | undefined {
+  const t = v?.trim();
+  return t ? t : undefined;
+}
+
+function readSupabaseUrl(): string | undefined {
+  return envTrim(process.env.SUPABASE_URL);
+}
+
+function readSupabaseKey(): string | undefined {
+  return (
+    envTrim(process.env.SUPABASE_SERVICE_ROLE_KEY) ??
+    envTrim(process.env.SUPABASE_ANON_KEY) ??
+    envTrim(process.env.SUPABASE_PUBLISHABLE_KEY)
+  );
+}
+
 function getClient(): SupabaseClient | null {
   if (client !== undefined) return client;
-  const url = process.env.SUPABASE_URL;
-  const key =
-    process.env.SUPABASE_SERVICE_ROLE_KEY ??
-    process.env.SUPABASE_ANON_KEY ??
-    process.env.SUPABASE_PUBLISHABLE_KEY;
+  const url = readSupabaseUrl();
+  const key = readSupabaseKey();
   if (!url || !key) {
     client = null;
     return null;
   }
   client = createClient(url, key);
   return client;
+}
+
+/** Why Supabase is disabled — safe to log (no secrets). */
+export function supabaseEnvGap(): string | null {
+  const url = readSupabaseUrl();
+  const key = readSupabaseKey();
+  if (url && key) return null;
+  if (!url && !key) {
+    return 'SUPABASE_URL and a Supabase key are missing or empty after trim';
+  }
+  if (!url) return 'SUPABASE_URL is missing or empty';
+  return 'set a non-empty SUPABASE_SERVICE_ROLE_KEY, SUPABASE_ANON_KEY, or SUPABASE_PUBLISHABLE_KEY';
 }
 
 function mapRow(row: {
